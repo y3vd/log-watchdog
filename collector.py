@@ -1,17 +1,10 @@
-from dataclasses import dataclass, asdict
 import re
 import json
 import time
+import os
 
-@dataclass
-class LogEntry:
-    # A class for representing a log entry.
-    timestamp: str
-    hostname: str
-    service_name: str
-    log_level: str
-    message: str
-    source_type: str
+from models import LogEntry
+from dataclasses import asdict
 
 compiled_line = re.compile(r"^(?P<time>\w{3}\s+\d+\s+[\d:]+)\s+(?P<host>\S+)\s+(?P<service>[\w\-\.\/\[\]]+):\s+(?P<msg>.*)$")
 
@@ -57,7 +50,7 @@ def tailAndParseFile(file_path):
             if current_line:
                 entry = parseSyslogLine(current_line)
 
-                if entry != None:
+                if entry is not None:
                     json_payload = json.dumps(asdict(entry))
                     print(json_payload)
             else:
@@ -65,7 +58,7 @@ def tailAndParseFile(file_path):
 
 
 def main():
-    log_target = "var/log/auth.log"
+    log_target = os.getenv("LOG_PATH", "var/log/auth.log")
     print("Starting Log Collector Watchdog on: " + log_target)
 
     try:
