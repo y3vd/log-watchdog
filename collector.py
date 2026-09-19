@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import re
+import json
+import time
 
 @dataclass
 class LogEntry:
@@ -13,7 +15,7 @@ class LogEntry:
 
 compiled_line = re.compile(r"^(?P<time>\w{3}\s+\d+\s+[\d:]+)\s+(?P<host>\S+)\s+(?P<service>[\w\-\.\/\[\]]+):\s+(?P<msg>.*)$")
 
-def parse_syslog_line(raw_line):
+def parseSyslogLine(raw_line):
     line = raw_line.strip()
 
     match = compiled_line.match(line)
@@ -46,10 +48,32 @@ def parse_syslog_line(raw_line):
         print("No match.")
         return None
 
-test_line = "Sep 14 17:42:31 server01 sshd[4217]: Failed password for root"
-test_line2 = "test"
-result = parse_syslog_line(test_line)
+def tailAndParseFile(file_path):
+    with open(file_path, "r") as file:
+        while True:
+            current_line = file.readline()
 
-print(result)
-print(result.hostname)
-print(result.log_level)
+            # Make sure current line is not empty
+            if current_line:
+                entry = parseSyslogLine(current_line)
+
+                if entry != None:
+                    json_payload = json.dumps(asdict(entry))
+                    print(json_payload)
+            else:
+                time.sleep(0.5)
+
+
+def main():
+    log_target = "var/log/auth.log"
+    print("Starting Log Collector Watchdog on: " + log_target)
+
+    try:
+        tailAndParseFile(log_target)
+    except FileNotFoundError:
+        print("Error: Target log file does not exist.")
+    except KeyboardInterrupt:
+        print("Stopping watchdog...")
+
+if __name__ == "__main__":
+    main()
